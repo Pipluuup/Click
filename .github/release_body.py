@@ -30,7 +30,8 @@ def main():
     )
     with open("RELEASE_BODY.md", "w", encoding="utf-8") as f:
         f.write(header)
-    print(header)
+    # 只输出 ASCII 摘要，避免在非 UTF-8 控制台（如英文 Windows）因编码报错
+    print("RELEASE_BODY.md written:", len(header), "chars")
 
 
 if __name__ == "__main__":

@@ -55,6 +55,8 @@ jobs:
       - name: Generate release body from CHANGELOG.md
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
         run: python .github/release_body.py "${{ github.ref_name }}"
 
       - name: Create GitHub Release
