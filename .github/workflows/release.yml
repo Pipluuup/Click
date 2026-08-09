@@ -52,17 +52,16 @@ jobs:
         shell: bash
         run: mv dist/ClickApp.exe "dist/Click-${{ github.ref_name }}-win64.exe"
 
+      - name: Generate release body from CHANGELOG.md
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: python .github/release_body.py "${{ github.ref_name }}"
+
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          body: |
-            ## Click 字母随机连发器 ${{ github.ref_name }}
-
-            按任意字母键，随机打出 26 个大写字母（GUI 版）。
-
-            - Windows 可执行文件：`Click-${{ github.ref_name }}-win64.exe`（免 Python 环境，双击即用）
-            - 使用说明见仓库 [README.md](README.md)
+          body_path: RELEASE_BODY.md
           files: dist/*.exe
