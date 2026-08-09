@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 工具配置（Claude Code 本地配置，不提交）
+.claude/
+
+# 测试/临时产物
+e2e_report.json
