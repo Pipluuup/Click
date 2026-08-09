@@ -4,7 +4,8 @@
 
 通过界面按钮开始 / 停止。开始后全局监听键盘：按下任意英文字母键时，
 吞掉原按键，并模拟键盘输入将英文 26 个大写字母（含被按下的那个）
-按随机顺序"打"到当前焦点窗口。全局按 F12 可快速停止。
+按随机顺序"打"到当前焦点窗口。勾选"自动连发"后，开始状态下每 0.05s
+自动输出一次。全局按 F12 可快速停止。
 
 实现要点：
 - 使用 keyboard.hook(on_event, suppress=True) 注册"阻塞型"钩子：
@@ -20,6 +21,7 @@
 import queue
 import random
 import string
+import threading
 import time
 import tkinter as tk
 
@@ -35,6 +37,9 @@ class App:
         self.root = root
         self.running = False
         self.last_trigger = {}
+        self.auto_var = tk.BooleanVar(value=False)  # 自动连发勾选框
+        self.auto_scheduled = False                 # 自动连发定时器是否已在排队
+        self.fire_lock = threading.Lock()           # 手动/自动两线程共用 write，加锁防交错
         self.gui_queue = queue.Queue()  # keyboard 线程 -> GUI 主线程 的通知队列
 
         root.title("字母随机连发器")
@@ -47,7 +52,12 @@ class App:
                              command=self.toggle)
         self.btn.pack(pady=(4, 4))
 
-        tk.Label(root, text="开始后按任意字母 → 随机打出 26 个大写字母\n全局按 F12 快速停止",
+        self.auto_chk = tk.Checkbutton(root, text="自动连发（每 0.05s 输出一次 26 个字母）",
+                                       variable=self.auto_var, font=("Microsoft YaHei UI", 9))
+        self.auto_chk.pack(pady=(2, 4))
+        self.auto_var.trace_add("write", self.on_auto_toggle)
+
+        tk.Label(root, text="开始后：按任意字母 或 勾选自动连发 → 随机打出 26 个大写字母\n全局按 F12 快速停止",
                  fg="#999999", font=("Microsoft YaHei UI", 9)).pack(padx=12, pady=(0, 12))
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -87,6 +97,7 @@ class App:
         self.last_trigger.clear()
         self.install_hooks()
         self.update_ui()
+        self.schedule_auto()
 
     def stop(self):
         self.running = False
@@ -121,16 +132,37 @@ class App:
             self.fire()
         return False  # 吞掉字母键（按下与抬起都吞）
 
+    # ---------- 自动连发 ----------
+    def on_auto_toggle(self, *args):
+        """勾选框状态变化时调用：运行中且勾选 -> 立即启动自动连发。"""
+        self.schedule_auto()
+
+    def schedule_auto(self):
+        """符合条件（运行中 + 勾选 + 尚未在排队）时排一个 0.05s 定时器。"""
+        if self.running and self.auto_var.get() and not self.auto_scheduled:
+            self.auto_scheduled = True
+            self.root.after(50, self.auto_tick)
+
+    def auto_tick(self):
+        """每个周期输出一次 26 个字母；停止或取消勾选后链条自动结束。"""
+        self.auto_scheduled = False
+        if not self.running or not self.auto_var.get():
+            return
+        self.fire()
+        self.schedule_auto()
+
     def fire(self):
         """模拟输入 26 个大写字母（每次新随机顺序）。
 
         无需手动防递归：keyboard 库对同进程注入的按键不会通知自己的钩子，
         注入的字母不会再次触发 on_event。
+        加锁：手动触发跑在 keyboard 线程、自动连发跑在 GUI 线程，避免并发写。
         """
         letters = list(ALPHABET)
         random.shuffle(letters)  # 每次按下生成新的随机顺序
         # 大写字母在 keyboard.write 中会自动模拟 Shift
-        keyboard.write("".join(letters), delay=0)
+        with self.fire_lock:
+            keyboard.write("".join(letters), delay=0)
 
 
 def main():
