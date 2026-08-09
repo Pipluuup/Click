@@ -124,7 +124,8 @@ class App:
         if name not in LETTERS:
             return True  # 非字母键：放行，不处理
 
-        if event.event_type == "down":
+        if event.event_type == "down" and not self.auto_var.get():
+            # 勾选了自动连发时，由定时器自己模拟，手动按键不再叠加触发
             now = time.monotonic()
             if now - self.last_trigger.get(name, -1.0) < STICKY_WINDOW:
                 return False  # 自动重复 / 极快重按 -> 吞掉但不触发（只触发一次）
