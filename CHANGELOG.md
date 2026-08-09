@@ -4,7 +4,7 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [v1.0.2] - 2026-08-09
 
 ### 修复
 - 勾选「自动连发」后改为纯自动模式：手动按键不再叠加触发输出（此前勾选后手动按键仍会额外触发一次）。取消勾选即恢复"按键触发"的手动模式。
